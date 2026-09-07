@@ -1,0 +1,72 @@
+:root {
+  --bg: #101211;
+  --surface: #171a18;
+  --surface-raised: #1d211f;
+  --line: #303632;
+  --line-soft: #242926;
+  --text: #eceee8;
+  --text-dim: #909891;
+  --text-faint: #626963;
+  --cyan: #72d4cd;
+  --cyan-soft: rgba(114, 212, 205, 0.13);
+  --amber: #d8aa65;
+  --amber-soft: rgba(216, 170, 101, 0.13);
+  --danger: #c78373;
+  --technical: 'Bahnschrift', 'DIN Alternate', 'Arial Narrow', sans-serif;
+  --mono: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--technical);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+button,
+input,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  border: 0;
+  outline: 0;
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+input[type='range'] {
+  cursor: pointer;
+}

@@ -1,0 +1,152 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 22px 26px 16px;
+  overflow: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand,
+.headerTools,
+.brand > div {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 13px;
+}
+
+.brand > div {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.brandMark {
+  width: 12px;
+  height: 30px;
+  background: linear-gradient(to bottom, var(--cyan) 0 35%, var(--line) 35% 48%, var(--amber) 48% 100%);
+}
+
+.brand h1 {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.brand div > span,
+.systemState,
+.sectionTitle,
+.appFooter {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.headerTools {
+  justify-content: flex-end;
+  gap: 24px;
+}
+
+.systemState {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.systemState::before {
+  width: 5px;
+  height: 5px;
+  background: var(--text-faint);
+  content: '';
+}
+
+.systemState.ready::before {
+  background: var(--cyan);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 15px;
+  padding-top: 16px;
+}
+
+.masterSection {
+  display: grid;
+  gap: 11px;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 8px 11px;
+  border-left: 2px solid var(--danger);
+  background: rgba(199, 131, 115, 0.07);
+  color: #d7aaa0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.error button {
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.trackSection {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  min-height: 244px;
+}
+
+.sectionTitle,
+.appFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tracks {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.appFooter {
+  padding-top: 13px;
+  margin-top: 13px;
+  border-top: 1px solid var(--line-soft);
+}
+
+@media (max-width: 980px) {
+  .app {
+    padding-inline: 18px;
+  }
+
+  .headerTools {
+    gap: 12px;
+  }
+}

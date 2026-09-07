@@ -1,0 +1,57 @@
+.timeline {
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line-soft);
+  background: rgba(23, 26, 24, 0.55);
+}
+
+.readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.position {
+  color: var(--text-dim);
+}
+
+.rail {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.fill {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--cyan), var(--amber));
+  opacity: 0.38;
+}
+
+.fill.active {
+  opacity: 0.9;
+}
+
+.markers {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+}
+
+.markers span {
+  flex: 1;
+  border-left: 1px solid rgba(16, 18, 17, 0.72);
+}
+
+.markers span:first-child {
+  border-left: 0;
+}

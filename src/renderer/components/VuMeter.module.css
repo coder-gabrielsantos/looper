@@ -1,0 +1,22 @@
+.container {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.container::after {
+  position: absolute;
+  inset: 0 18% 0 auto;
+  width: 1px;
+  background: rgba(236, 238, 232, 0.2);
+  content: '';
+}
+
+.bar {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #5a8f8a 0%, var(--cyan) 74%, var(--amber) 100%);
+  transition: width 45ms linear;
+}

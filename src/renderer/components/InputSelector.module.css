@@ -1,0 +1,37 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.label {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.11em;
+}
+
+.select {
+  width: 226px;
+  padding: 7px 24px 7px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  outline: 0;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  text-overflow: ellipsis;
+}
+
+.select:focus {
+  border-color: var(--text-faint);
+}
+
+.select:disabled {
+  opacity: 0.45;
+}
+
+.error {
+  display: none;
+}

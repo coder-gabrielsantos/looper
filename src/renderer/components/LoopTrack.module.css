@@ -1,0 +1,204 @@
+.track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 13px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface);
+  transition: border-color 220ms ease, background-color 220ms ease;
+}
+
+.track.standby {
+  border-top-color: var(--amber);
+  background: linear-gradient(180deg, var(--amber-soft), var(--surface) 30%);
+}
+
+.track.recording,
+.track.playing {
+  border-top-color: var(--cyan);
+}
+
+.track.recording {
+  background: linear-gradient(180deg, var(--cyan-soft), var(--surface) 34%);
+}
+
+.header,
+.footer,
+.state,
+.recordButton,
+.meterGroup,
+.volumeGroup {
+  display: flex;
+  align-items: center;
+}
+
+.header,
+.footer {
+  justify-content: space-between;
+}
+
+.header > div:first-child {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.number,
+.state,
+.microLabel,
+.footer {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.number,
+.microLabel,
+.footer {
+  color: var(--text-faint);
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.state {
+  gap: 7px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.stateMark {
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+}
+
+.standby .state {
+  color: var(--amber);
+}
+
+.recording .state,
+.playing .state {
+  color: var(--cyan);
+}
+
+.standby .stateMark,
+.recording .stateMark {
+  animation: softPulse 1.15s ease-in-out infinite;
+}
+
+.meterGroup,
+.volumeGroup {
+  gap: 12px;
+}
+
+.microLabel {
+  width: 38px;
+  flex: 0 0 38px;
+}
+
+.recordButton {
+  justify-content: center;
+  gap: 11px;
+  min-height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
+}
+
+.recordButton:hover:not(:disabled) {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.recordButton:active:not(:disabled) {
+  background: var(--line-soft);
+}
+
+.standby .recordButton {
+  border-color: rgba(216, 170, 101, 0.5);
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.recording .recordButton,
+.playing .recordButton {
+  border-color: rgba(114, 212, 205, 0.45);
+  color: var(--cyan);
+}
+
+.recording .recordButton {
+  background: var(--cyan-soft);
+}
+
+.recordButton:disabled {
+  cursor: default;
+}
+
+.actionMark {
+  width: 8px;
+  height: 8px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.standby .actionMark {
+  border-radius: 0;
+  background: currentColor;
+  animation: softPulse 1.15s ease-in-out infinite;
+}
+
+.recording .actionMark {
+  background: currentColor;
+  animation: softPulse 0.85s ease-in-out infinite;
+}
+
+.playing .actionMark {
+  border-radius: 0;
+  border-left-width: 3px;
+  border-right-width: 3px;
+}
+
+.footer {
+  min-height: 24px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.clearButton {
+  padding: 4px 0 4px 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.clearButton:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.clearButton:disabled {
+  color: var(--text-faint);
+  opacity: 0.35;
+}
+
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.28; }
+}

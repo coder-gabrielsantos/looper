@@ -1,0 +1,37 @@
+.container {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+}
+
+.label {
+  order: 2;
+  min-width: 31px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  text-align: right;
+}
+
+.slider {
+  width: 100%;
+  height: 2px;
+  appearance: none;
+  outline: none;
+  background: var(--line);
+}
+
+.slider::-webkit-slider-thumb {
+  width: 7px;
+  height: 13px;
+  appearance: none;
+  border: 0;
+  border-radius: 1px;
+  background: var(--text-dim);
+  transition: background-color 140ms ease;
+}
+
+.slider:hover::-webkit-slider-thumb {
+  background: var(--text);
+}
