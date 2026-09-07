@@ -16,12 +16,21 @@ export default function ClockControls({ locked, onError }: ClockControlsProps) {
   const clock = getClockEngine()
   const [state, setState] = useState<ClockState>(clock.getState())
   const [bpmInput, setBpmInput] = useState(String(clock.getState().bpm))
+  const [beatPulse, setBeatPulse] = useState({ id: 0, accented: false })
 
   useEffect(
     () =>
       clock.on('state', (nextState) => {
         setState(nextState)
         setBpmInput(String(nextState.bpm))
+      }),
+    [clock]
+  )
+
+  useEffect(
+    () =>
+      clock.on('beat', ({ accented }) => {
+        setBeatPulse((current) => ({ id: current.id + 1, accented }))
       }),
     [clock]
   )
@@ -68,6 +77,11 @@ export default function ClockControls({ locked, onError }: ClockControlsProps) {
     }
   }
 
+  const toggleClick = () => {
+    setBeatPulse({ id: 0, accented: false })
+    clock.setClickEnabled(!state.clickEnabled)
+  }
+
   return (
     <section className={styles.panel} aria-label="Master clock controls">
       <div className={styles.transport}>
@@ -87,18 +101,22 @@ export default function ClockControls({ locked, onError }: ClockControlsProps) {
         </button>
         <button
           className={`${styles.clickButton} ${state.clickEnabled ? styles.active : ''}`}
-          onClick={() => clock.setClickEnabled(!state.clickEnabled)}
+          onClick={toggleClick}
           aria-pressed={state.clickEnabled}
         >
-          CLICK {state.clickEnabled ? 'ON' : 'OFF'}
+          {state.clickEnabled && beatPulse.id > 0 && (
+            <span
+              key={beatPulse.id}
+              className={`${styles.beatFlash} ${beatPulse.accented ? styles.accented : ''}`}
+              aria-hidden="true"
+            />
+          )}
+          <span className={styles.buttonLabel}>CLICK {state.clickEnabled ? 'ON' : 'OFF'}</span>
         </button>
       </div>
 
       <div className={styles.tempo}>
-        <div className={styles.sectionHeading}>
-          <label className={styles.eyebrow} htmlFor="bpm-input">TEMPO</label>
-          {locked && <span className={styles.locked}>GRID LOCKED</span>}
-        </div>
+        {locked && <span className={`${styles.locked} ${styles.tempoLocked}`}>GRID LOCKED</span>}
         <div className={styles.bpmControl}>
           <button
             className={styles.bpmStep}
@@ -116,6 +134,7 @@ export default function ClockControls({ locked, onError }: ClockControlsProps) {
               min="40"
               max="240"
               value={bpmInput}
+              aria-label="Tempo in BPM"
               onChange={(event) => updateBpmInput(event.target.value)}
               onBlur={commitBpmInput}
               onKeyDown={(event) => {

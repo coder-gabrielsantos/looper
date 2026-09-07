@@ -51,6 +51,7 @@ export class AudioEngine {
   private clockStateUnsubscribe: (() => void) | null = null
   private nextExportRequestId = 1
   private pendingExports = new Map<number, PendingExport>()
+  private exportPromise: Promise<Uint8Array> | null = null
 
   async init(): Promise<void> {
     if (this.initialized) return
@@ -480,6 +481,18 @@ export class AudioEngine {
   }
 
   async exportMp3(): Promise<Uint8Array> {
+    if (this.exportPromise) return this.exportPromise
+
+    const exportPromise = this.performExportMp3()
+    this.exportPromise = exportPromise
+    try {
+      return await exportPromise
+    } finally {
+      if (this.exportPromise === exportPromise) this.exportPromise = null
+    }
+  }
+
+  private async performExportMp3(): Promise<Uint8Array> {
     if (!this.context || !this.initialized) throw new Error('Audio engine is not ready.')
 
     if (
@@ -502,22 +515,27 @@ export class AudioEngine {
       throw new Error('Record at least one complete track before exporting.')
     }
 
-    const trackBuffers = await Promise.all(
-      exportableTracks.map(async ([trackId, track]) => ({
-        samples: await this.requestTrackSamples(trackId, track),
-        volume: track.volume
-      }))
-    )
-    const frameCount = Math.max(...trackBuffers.map(({ samples }) => samples.length))
-    if (frameCount === 0) throw new Error('The recorded tracks are empty.')
-
-    const mix = new Float32Array(frameCount)
-    for (const { samples, volume } of trackBuffers) {
+    // Read and mix one track at a time so long sessions do not keep every
+    // full-sized recording duplicated in the renderer during export.
+    let mix: Float32Array | null = null
+    for (const [trackId, track] of exportableTracks) {
+      const samples = await this.requestTrackSamples(trackId, track)
       if (samples.length === 0) continue
-      for (let frame = 0; frame < frameCount; frame += 1) {
-        mix[frame] += samples[frame % samples.length] * volume
+
+      if (!mix) {
+        mix = new Float32Array(samples.length)
+      } else if (samples.length > mix.length) {
+        const expandedMix = new Float32Array(samples.length)
+        expandedMix.set(mix)
+        mix = expandedMix
+      }
+
+      for (let frame = 0; frame < mix.length; frame += 1) {
+        mix[frame] += samples[frame % samples.length] * track.volume
       }
     }
+
+    if (!mix || mix.length === 0) throw new Error('The recorded tracks are empty.')
 
     const processedMix = await this.renderMasterPluginForExport(mix)
 
@@ -554,23 +572,24 @@ export class AudioEngine {
         parameters.map(({ index, value }) => vst.setParameter(renderPlugin.handle, index, value))
       )
 
-      // Feed two cycles and keep the second so time-based effects have a warm loop state.
-      const repeatedInput = new Float32Array(input.length * 2)
-      repeatedInput.set(input)
-      repeatedInput.set(input, input.length)
-      const repeatedOutput = new Float32Array(repeatedInput.length)
+      // Warm time-based effects in the first pass, then retain only the second
+      // pass. Processing in chunks avoids two extra full-cycle buffers.
+      const output = new Float32Array(input.length)
+      for (let pass = 0; pass < 2; pass += 1) {
+        for (let offset = 0; offset < input.length; offset += MASTER_PLUGIN_BLOCK_SIZE) {
+          const remaining = input.length - offset
+          const frameCount = Math.min(MASTER_PLUGIN_BLOCK_SIZE, remaining)
+          const chunk = new Float32Array(MASTER_PLUGIN_BLOCK_SIZE)
+          chunk.set(input.subarray(offset, offset + frameCount))
+          const processed = await vst.processAudio(renderPlugin.handle, chunk)
 
-      for (let offset = 0; offset < repeatedInput.length; offset += MASTER_PLUGIN_BLOCK_SIZE) {
-        const chunk = new Float32Array(MASTER_PLUGIN_BLOCK_SIZE)
-        chunk.set(repeatedInput.subarray(offset, offset + MASTER_PLUGIN_BLOCK_SIZE))
-        const processed = await vst.processAudio(renderPlugin.handle, chunk)
-        repeatedOutput.set(
-          processed.subarray(0, Math.min(processed.length, repeatedOutput.length - offset)),
-          offset
-        )
+          if (pass === 1) {
+            output.set(processed.subarray(0, Math.min(processed.length, frameCount)), offset)
+          }
+        }
       }
 
-      return repeatedOutput.slice(input.length)
+      return output
     } finally {
       await vst.unloadPlugin(renderPlugin.handle).catch(() => undefined)
     }

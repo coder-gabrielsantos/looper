@@ -29,7 +29,7 @@
 
 .header,
 .footer,
-.stateButton,
+.removeTrackButton,
 .recordButton,
 .meterGroup,
 .volumeGroup {
@@ -50,9 +50,7 @@
 }
 
 .number,
-.state,
-.microLabel,
-.footer {
+.microLabel {
   font-family: var(--mono);
   font-size: 8px;
   letter-spacing: 0.1em;
@@ -71,62 +69,28 @@
   text-transform: uppercase;
 }
 
-.stateButton {
-  justify-content: center;
-  gap: 7px;
-  min-width: 76px;
-  min-height: 28px;
-  padding: 6px 9px;
-  border-radius: 2px;
+.removeTrackButton {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
   background: transparent;
   color: var(--text-faint);
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+  line-height: 0;
+  transition: color 160ms ease;
 }
 
-.stateMark {
-  width: 5px;
-  height: 5px;
-  background: currentColor;
+.removeTrackButton svg {
+  width: 15px;
+  height: 15px;
 }
 
-.standby .stateButton {
-  color: var(--amber);
+.removeTrackButton:hover:not(:disabled) {
+  color: var(--danger);
 }
 
-.recording .stateButton,
-.playing .stateButton {
-  color: var(--cyan);
-}
-
-.playing .stateButton:hover:not(:disabled) {
-  background: var(--cyan-soft);
-}
-
-.paused {
-  border-top-color: var(--amber);
-}
-
-.paused .stateButton {
-  background: var(--amber-soft);
-  color: var(--amber);
-}
-
-.paused .stateButton:hover:not(:disabled) {
-  color: var(--text);
-}
-
-.stateButton:disabled {
+.removeTrackButton:disabled {
   cursor: default;
-}
-
-.standby .stateMark,
-.recording .stateMark,
-.paused .stateMark {
-  animation: softPulse 1.15s ease-in-out infinite;
+  opacity: 0.35;
 }
 
 .meterGroup,
@@ -178,6 +142,16 @@
   background: var(--cyan-soft);
 }
 
+.paused {
+  border-top-color: var(--amber);
+}
+
+.paused .recordButton {
+  border-color: rgba(216, 170, 101, 0.5);
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
 .recordButton:disabled {
   cursor: default;
 }
@@ -187,6 +161,12 @@
   height: 8px;
   border: 1px solid currentColor;
   border-radius: 50%;
+}
+
+.playIcon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
 }
 
 .standby .actionMark {
@@ -200,13 +180,8 @@
   animation: softPulse 0.85s ease-in-out infinite;
 }
 
-.playing .actionMark {
-  border-radius: 0;
-  border-left-width: 3px;
-  border-right-width: 3px;
-}
-
 .footer {
+  justify-content: flex-end;
   min-height: 24px;
   padding-top: 9px;
   border-top: 1px solid var(--line-soft);
@@ -227,29 +202,6 @@
 
 .clearButton:disabled {
   color: var(--text-faint);
-  opacity: 0.35;
-}
-
-.footerActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.removeButton {
-  padding: 4px 0;
-  background: transparent;
-  color: var(--text-faint);
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: 0.12em;
-}
-
-.removeButton:hover:not(:disabled) {
-  color: var(--danger);
-}
-
-.removeButton:disabled {
   opacity: 0.35;
 }
 

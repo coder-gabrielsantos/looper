@@ -21,6 +21,16 @@
   border-left: 1px solid var(--line-soft);
 }
 
+.tempo {
+  position: relative;
+}
+
+.tempoLocked {
+  position: absolute;
+  top: 15px;
+  right: 17px;
+}
+
 .sectionHeading {
   display: flex;
   align-items: center;
@@ -76,6 +86,29 @@
   font-size: 10px;
   letter-spacing: 0.1em;
   transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.clickButton {
+  position: relative;
+  overflow: hidden;
+}
+
+.buttonLabel {
+  position: relative;
+  z-index: 1;
+}
+
+.beatFlash {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: rgba(114, 212, 205, 0.58);
+  pointer-events: none;
+  animation: beatFlash 190ms ease-out forwards;
+}
+
+.beatFlash.accented {
+  background: rgba(216, 170, 101, 0.68);
 }
 
 .transportButton {
@@ -266,6 +299,11 @@
 
 .cycleOptions button:disabled:not(.selected) {
   opacity: 0.35;
+}
+
+@keyframes beatFlash {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @media (max-width: 980px) {

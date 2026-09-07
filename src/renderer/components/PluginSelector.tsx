@@ -12,7 +12,6 @@ interface PluginSelectorProps {
 interface PluginOption {
   value: string
   label: string
-  format: string
 }
 
 function DropdownIndicator() {
@@ -57,11 +56,10 @@ export default function PluginSelector({ disabled = false, onError }: PluginSele
 
   const options = useMemo<PluginOption[]>(
     () => [
-      { value: '', label: 'NONE', format: '' },
+      { value: '', label: 'NONE' },
       ...plugins.map((plugin) => ({
         value: plugin.path,
-        label: plugin.name,
-        format: plugin.format
+        label: plugin.name
       }))
     ],
     [plugins]
@@ -96,19 +94,6 @@ export default function PluginSelector({ disabled = false, onError }: PluginSele
         const loaded = await getAudioEngine().setMasterPlugin(option.value || null)
         setSelected(option.value)
         setHasEditor(loaded?.hasEditor ?? false)
-
-        if (loaded?.hasEditor) {
-          try {
-            const result = await getAudioEngine().openMasterPluginEditor()
-            if (!result.opened) onError?.('The plugin is active, but its interface could not be opened.')
-          } catch (error) {
-            onError?.(
-              error instanceof Error
-                ? `The plugin is active, but its interface failed to open: ${error.message}`
-                : 'The plugin is active, but its interface failed to open.'
-            )
-          }
-        }
       } catch (error) {
         setSelected(previousSelected)
         onError?.(error instanceof Error ? error.message : 'Failed to load the VST2 plugin.')
@@ -137,52 +122,28 @@ export default function PluginSelector({ disabled = false, onError }: PluginSele
   return (
     <section className={styles.panel} aria-label="Master VST2 effect">
       <div className={styles.heading}>
-        <div>
-          <span className={styles.eyebrow}>MASTER FX</span>
-          <span className={styles.scope}>ALL TRACKS</span>
-        </div>
-        <span className={`${styles.status} ${selected ? styles.active : ''}`}>
-          {selected ? 'ACTIVE' : 'BYPASSED'}
-        </span>
+        <span className={styles.eyebrow}>FX</span>
       </div>
 
       {!available ? (
         <span className={styles.unavailable}>VST2 HOST NOT AVAILABLE</span>
       ) : (
-        <div className={styles.controls}>
-          <div className={styles.selectRow}>
-            <Select<PluginOption, false>
-              inputId="master-plugin-select"
-              className={styles.selectRoot}
-              classNamePrefix="pluginSelect"
-              options={options}
-              value={selectedOption}
-              onChange={handleChange}
-              isDisabled={controlsDisabled}
-              isLoading={switching}
-              isSearchable={false}
-              components={{ DropdownIndicator, IndicatorSeparator: null }}
-              placeholder="NO PLUGINS FOUND"
-              noOptionsMessage={() => 'NO PLUGINS FOUND'}
-              aria-label="Master VST2 plugin selector"
-              formatOptionLabel={(option) => (
-                <div className={styles.optionLabel}>
-                  <span>{option.label}</span>
-                  {option.format && <span className={styles.formatBadge}>{option.format}</span>}
-                </div>
-              )}
-            />
-            <button
-              className={styles.scanButton}
-              type="button"
-              onClick={handleRescan}
-              disabled={controlsDisabled}
-              title="Rescan VST2 directories"
-              aria-label="Rescan VST2 directories"
-            >
-              {loading ? '...' : 'RESCAN'}
-            </button>
-          </div>
+        <>
+          <Select<PluginOption, false>
+            inputId="master-plugin-select"
+            className={styles.selectRoot}
+            classNamePrefix="pluginSelect"
+            options={options}
+            value={selectedOption}
+            onChange={handleChange}
+            isDisabled={controlsDisabled}
+            isLoading={switching}
+            isSearchable={false}
+            components={{ DropdownIndicator, IndicatorSeparator: null }}
+            placeholder="NO PLUGINS FOUND"
+            noOptionsMessage={() => 'NO PLUGINS FOUND'}
+            aria-label="Master VST2 plugin selector"
+          />
           <button
             className={styles.editorButton}
             type="button"
@@ -190,9 +151,19 @@ export default function PluginSelector({ disabled = false, onError }: PluginSele
             disabled={controlsDisabled || !selected || !hasEditor || openingEditor}
             title={hasEditor ? 'Open the native plugin interface' : 'This plugin has no interface'}
           >
-            {openingEditor ? 'OPENING...' : 'OPEN INTERFACE'}
+            {openingEditor ? 'OPENING...' : 'INTERFACE'}
           </button>
-        </div>
+          <button
+            className={styles.scanButton}
+            type="button"
+            onClick={handleRescan}
+            disabled={controlsDisabled}
+            title="Rescan VST2 directories"
+            aria-label="Rescan VST2 directories"
+          >
+            {loading ? '...' : 'SCAN'}
+          </button>
+        </>
       )}
     </section>
   )

@@ -18,14 +18,7 @@ export default function CycleProgress() {
 
   return (
     <section className={styles.timeline} aria-label="Global cycle position">
-      <div className={styles.readout}>
-        <span>GLOBAL PHASE</span>
-        <span className={styles.position}>
-          {snapshot.running
-            ? `BAR ${String(snapshot.bar).padStart(2, '0')} / ${String(snapshot.barsPerCycle).padStart(2, '0')} · BEAT ${snapshot.beat}`
-            : 'CLOCK IDLE'}
-        </span>
-      </div>
+      <span className={styles.label}>PHASE</span>
       <div className={styles.rail}>
         <div
           className={`${styles.fill} ${snapshot.running ? styles.active : ''}`}
@@ -37,6 +30,9 @@ export default function CycleProgress() {
           ))}
         </div>
       </div>
+      <span className={styles.position}>
+        {snapshot.running ? `${snapshot.bar}/${snapshot.barsPerCycle}` : ''}
+      </span>
     </section>
   )
 }

@@ -30,9 +30,9 @@ npm run build
 6. Pressione **ARM** em uma faixa. Ela entra em `WAITING FOR GRID`, sem reiniciar a barra de fase, e usa o restante do ciclo atual como contagem.
 7. A captura começa somente quando o ciclo global atual termina. Todas as faixas usam a mesma fronteira de ciclo, inclusive a primeira.
 8. Ao completar um ciclo inteiro de gravação, o próprio `AudioWorklet` troca de captura para reprodução no mesmo frame, sem depender da thread da interface.
-9. Pressione **REPLACE** para substituir uma faixa. O loop anterior continua tocando até o novo take assumir no fim do ciclo.
-10. Use **PAUSE** no cabeçalho de uma faixa para silenciá-la. O playhead continua seguindo o grid global e **RESUME** devolve o áudio já na fase correta.
-11. Escolha um efeito em **MASTER FX** para processar a soma de todas as faixas. A interface nativa do VST2 abre ao selecionar o plugin e pode ser reaberta com **OPEN INTERFACE**.
+9. Use o botão principal da faixa para alternar entre **PAUSE** e **RESUME**. O playhead continua seguindo o grid global e o áudio retorna na fase correta.
+10. Use **CLEAR** para limpar o áudio gravado ou o botão **X** no cabeçalho para remover a faixa.
+11. Escolha um efeito em **MASTER FX** para processar a soma de todas as faixas. Use **INTERFACE** quando quiser abrir a janela nativa do VST2.
 12. Use **EXPORT MP3** para gerar um mixdown de um ciclo completo. Escolha o destino no diálogo de salvamento do sistema.
 
 Enquanto houver uma faixa armada, gravando ou tocando, BPM e duração do ciclo ficam bloqueados. Isso evita alterar a duração física de buffers já gravados e mantém a fase entre todas as faixas. Limpe as faixas para configurar um novo grid.

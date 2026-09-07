@@ -150,11 +150,13 @@ export default function App() {
       <main className={styles.main}>
         <section className={styles.masterSection}>
           <ClockControls locked={gridLocked} onError={setError} />
-          <CycleProgress />
-          <PluginSelector
-            disabled={!ready || exportState === 'exporting'}
-            onError={setError}
-          />
+          <div className={styles.utilityRow}>
+            <CycleProgress />
+            <PluginSelector
+              disabled={!ready || exportState === 'exporting'}
+              onError={setError}
+            />
+          </div>
         </section>
 
         {error && (

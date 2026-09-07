@@ -17,19 +17,19 @@ const BLOCK_SIZE = 1152
 workerScope.onmessage = (event) => {
   try {
     const samples = new Float32Array(event.data.samples)
-    const pcm = new Int16Array(samples.length)
-
-    for (let index = 0; index < samples.length; index += 1) {
-      const sample = Math.max(-1, Math.min(1, samples[index]))
-      pcm[index] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
-    }
-
     const encoder = new Mp3Encoder(1, event.data.sampleRate, event.data.bitrate)
     const chunks: Uint8Array[] = []
     let byteLength = 0
 
-    for (let offset = 0; offset < pcm.length; offset += BLOCK_SIZE) {
-      const encoded = encoder.encodeBuffer(pcm.subarray(offset, offset + BLOCK_SIZE))
+    for (let offset = 0; offset < samples.length; offset += BLOCK_SIZE) {
+      const frameCount = Math.min(BLOCK_SIZE, samples.length - offset)
+      const pcm = new Int16Array(frameCount)
+      for (let index = 0; index < frameCount; index += 1) {
+        const sample = Math.max(-1, Math.min(1, samples[offset + index]))
+        pcm[index] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
+      }
+
+      const encoded = encoder.encodeBuffer(pcm)
       if (encoded.length === 0) continue
       chunks.push(encoded)
       byteLength += encoded.length

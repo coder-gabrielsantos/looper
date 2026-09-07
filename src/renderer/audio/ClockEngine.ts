@@ -20,6 +20,12 @@ export interface CycleEndEvent {
   cycle: number
 }
 
+export interface BeatEvent {
+  time: number
+  beat: number
+  accented: boolean
+}
+
 export interface ClockState {
   running: boolean
   clickEnabled: boolean
@@ -34,6 +40,7 @@ export interface ClockSnapshot extends ClockState {
 }
 
 interface ClockEvents {
+  beat: BeatEvent
   downbeat: DownbeatEvent
   'cycle-end': CycleEndEvent
   state: ClockState
@@ -46,12 +53,13 @@ export class ClockEngine {
   private running = false
   private clickEnabled = false
   private bpm = 120
-  private barsPerCycle: CycleBars = 4
+  private barsPerCycle: CycleBars = 2
   private beatOriginTime = 0
   private cycleAnchorTime = 0
   private nextBeatIndex = 0
   private schedulerId: number | null = null
   private scheduledClicks = new Set<OscillatorNode>()
+  private scheduledVisualPulses = new Set<number>()
   private listeners = new Map<keyof ClockEvents, Set<(event: unknown) => void>>()
 
   init(context: AudioContext): void {
@@ -125,6 +133,7 @@ export class ClockEngine {
   setClickEnabled(enabled: boolean): void {
     if (enabled === this.clickEnabled) return
     this.clickEnabled = enabled
+    if (!enabled) this.clearVisualPulses()
     this.emitState()
   }
 
@@ -198,6 +207,7 @@ export class ClockEngine {
       const beatTime = this.beatOriginTime + this.nextBeatIndex * beatDuration
       if (beatTime >= this.context.currentTime) {
         this.scheduleClick(beatTime, this.nextBeatIndex)
+        this.scheduleVisualPulse(beatTime, this.nextBeatIndex)
         this.emitGridEvents(beatTime, this.nextBeatIndex)
       }
       this.nextBeatIndex += 1
@@ -233,7 +243,7 @@ export class ClockEngine {
     const beatInBar = beatIndex % BEATS_PER_BAR
     oscillator.frequency.value = beatInBar === 0 ? 1320 : 880
     gain.gain.setValueAtTime(0.0001, time)
-    gain.gain.exponentialRampToValueAtTime(beatInBar === 0 ? 0.16 : 0.08, time + 0.002)
+    gain.gain.exponentialRampToValueAtTime(beatInBar === 0 ? 0.24 : 0.13, time + 0.002)
     gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.035)
     oscillator.connect(gain)
     gain.connect(this.context.destination)
@@ -245,6 +255,24 @@ export class ClockEngine {
       gain.disconnect()
       this.scheduledClicks.delete(oscillator)
     }
+  }
+
+  private scheduleVisualPulse(time: number, beatIndex: number): void {
+    if (!this.context || !this.clickEnabled) return
+
+    const delayMs = Math.max(0, (time - this.context.currentTime) * 1000)
+    const timerId = window.setTimeout(() => {
+      this.scheduledVisualPulses.delete(timerId)
+      if (!this.running || !this.clickEnabled) return
+      const beat = (beatIndex % BEATS_PER_BAR) + 1
+      this.emit('beat', { time, beat, accented: beat === 1 })
+    }, delayMs)
+    this.scheduledVisualPulses.add(timerId)
+  }
+
+  private clearVisualPulses(): void {
+    for (const timerId of this.scheduledVisualPulses) window.clearTimeout(timerId)
+    this.scheduledVisualPulses.clear()
   }
 
   private getNextGridTime(origin: number, interval: number, minLeadSeconds: number): number {
@@ -274,6 +302,7 @@ export class ClockEngine {
       } catch {}
     }
     this.scheduledClicks.clear()
+    this.clearVisualPulses()
   }
 
   private emit<K extends keyof ClockEvents>(event: K, payload: ClockEvents[K]): void {

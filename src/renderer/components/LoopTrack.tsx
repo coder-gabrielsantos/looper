@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Pause, Play, X } from 'lucide-react'
 import { getAudioEngine } from '../audio/audioEngine'
 import { TrackId, TrackState } from '../audio/types'
 import styles from './LoopTrack.module.css'
@@ -12,22 +13,6 @@ interface LoopTrackProps {
   onError?: (message: string) => void
   onTrackStateChange?: (trackId: TrackId, state: TrackState) => void
   onRemove: (trackId: TrackId) => void
-}
-
-const STATE_LABELS: Record<TrackState, string> = {
-  [TrackState.IDLE]: 'READY',
-  [TrackState.STANDBY]: 'WAITING FOR GRID',
-  [TrackState.RECORDING]: 'CAPTURING',
-  [TrackState.PLAYING]: 'PAUSE',
-  [TrackState.PAUSED]: 'RESUME'
-}
-
-const ACTION_LABELS: Record<TrackState, string> = {
-  [TrackState.IDLE]: 'ARM',
-  [TrackState.STANDBY]: 'QUEUED',
-  [TrackState.RECORDING]: 'RECORDING',
-  [TrackState.PLAYING]: 'REPLACE',
-  [TrackState.PAUSED]: 'REPLACE'
 }
 
 export default function LoopTrack({
@@ -60,7 +45,7 @@ export default function LoopTrack({
   }, [onTrackStateChange, trackId])
 
   const handleRecord = useCallback(async () => {
-    if (state === TrackState.STANDBY || state === TrackState.RECORDING) return
+    if (state !== TrackState.IDLE) return
     setBusy(true)
     try {
       await getAudioEngine().startRecording(trackId)
@@ -91,6 +76,17 @@ export default function LoopTrack({
     [trackId]
   )
 
+  const hasRecordedLoop = state === TrackState.PLAYING || state === TrackState.PAUSED
+  const recordLabel =
+    state === TrackState.PLAYING
+      ? 'PAUSE'
+      : state === TrackState.PAUSED
+        ? 'RESUME'
+        : state === TrackState.IDLE
+          ? 'ARM'
+          : state === TrackState.STANDBY
+            ? 'QUEUED'
+            : 'RECORDING'
   const recordDisabled =
     disabled || busy || state === TrackState.STANDBY || state === TrackState.RECORDING
 
@@ -102,16 +98,13 @@ export default function LoopTrack({
           <h2 className={styles.title}>{label}</h2>
         </div>
         <button
-          className={styles.stateButton}
+          className={styles.removeTrackButton}
           type="button"
-          onClick={handleTogglePlayback}
-          disabled={
-            disabled || (state !== TrackState.PLAYING && state !== TrackState.PAUSED)
-          }
-          aria-label={state === TrackState.PAUSED ? `Resume ${label}` : `Pause ${label}`}
+          onClick={handleRemove}
+          disabled={disabled || busy}
+          aria-label={`Remove ${label}`}
         >
-          <span className={styles.stateMark} />
-          {STATE_LABELS[state]}
+          <X aria-hidden="true" />
         </button>
       </header>
 
@@ -122,12 +115,18 @@ export default function LoopTrack({
 
       <button
         className={styles.recordButton}
-        onClick={handleRecord}
+        onClick={hasRecordedLoop ? handleTogglePlayback : handleRecord}
         disabled={recordDisabled}
-        aria-label={`${ACTION_LABELS[state]} ${label}`}
+        aria-label={`${recordLabel} ${label}`}
       >
-        <span className={styles.actionMark} />
-        <span>{ACTION_LABELS[state]}</span>
+        {state === TrackState.PLAYING ? (
+          <Pause className={styles.playIcon} aria-hidden="true" />
+        ) : state === TrackState.PAUSED ? (
+          <Play className={styles.playIcon} aria-hidden="true" />
+        ) : (
+          <span className={styles.actionMark} />
+        )}
+        <span>{recordLabel}</span>
       </button>
 
       <div className={styles.volumeGroup}>
@@ -136,24 +135,13 @@ export default function LoopTrack({
       </div>
 
       <footer className={styles.footer}>
-        <span>SYNC / MASTER</span>
-        <div className={styles.footerActions}>
-          <button
-            className={styles.clearButton}
-            onClick={handleClear}
-            disabled={disabled || busy || state === TrackState.IDLE}
-          >
-            CLEAR
-          </button>
-          <button
-            className={styles.removeButton}
-            onClick={handleRemove}
-            disabled={disabled || busy}
-            aria-label={`Remove ${label}`}
-          >
-            REMOVE
-          </button>
-        </div>
+        <button
+          className={styles.clearButton}
+          onClick={handleClear}
+          disabled={disabled || busy || state === TrackState.IDLE}
+        >
+          CLEAR
+        </button>
       </footer>
     </article>
   )
