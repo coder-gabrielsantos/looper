@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import { setupMediaPermissions } from './mediaPermission'
@@ -10,8 +10,9 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 720,
-    minWidth: 900,
-    minHeight: 620,
+    resizable: false,
+    maximizable: false,
+    minimizable: true,
     backgroundColor: '#1a1a1a',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -62,6 +63,7 @@ app.whenReady().then(() => {
     }
   )
 
+  Menu.setApplicationMenu(null)
   createWindow()
 
   app.on('activate', () => {
