@@ -157,7 +157,7 @@
 
 .bpmReadout span {
   grid-column: 3;
-  padding-left: 2px;
+  padding-left: 8px;
   color: var(--text-faint);
   font-family: var(--mono);
   font-size: 10px;
