@@ -32,7 +32,8 @@ npm run build
 8. Ao completar um ciclo inteiro de gravação, o próprio `AudioWorklet` troca de captura para reprodução no mesmo frame, sem depender da thread da interface.
 9. Pressione **REPLACE** para substituir uma faixa. O loop anterior continua tocando até o novo take assumir no fim do ciclo.
 10. Use **PAUSE** no cabeçalho de uma faixa para silenciá-la. O playhead continua seguindo o grid global e **RESUME** devolve o áudio já na fase correta.
-11. Use **EXPORT MP3** para gerar um mixdown de um ciclo completo. Escolha o destino no diálogo de salvamento do sistema.
+11. Escolha um efeito em **MASTER FX** para processar a soma de todas as faixas. A interface nativa do VST2 abre ao selecionar o plugin e pode ser reaberta com **OPEN INTERFACE**.
+12. Use **EXPORT MP3** para gerar um mixdown de um ciclo completo. Escolha o destino no diálogo de salvamento do sistema.
 
 Enquanto houver uma faixa armada, gravando ou tocando, BPM e duração do ciclo ficam bloqueados. Isso evita alterar a duração física de buffers já gravados e mantém a fase entre todas as faixas. Limpe as faixas para configurar um novo grid.
 
@@ -53,7 +54,16 @@ Enquanto houver uma faixa armada, gravando ou tocando, BPM e duração do ciclo 
 - O mixdown respeita o volume individual das faixas e repete buffers menores quando necessário para preencher o maior ciclo.
 - Picos acima de `0.98` são normalizados antes da codificação para evitar clipping digital.
 - A codificação mono em 192 kbps acontece em um Web Worker, mantendo a interface responsiva.
+- Quando um **MASTER FX** está ativo, o mix exportado também passa por uma segunda instância do plugin com os mesmos parâmetros.
 - O encoder utilizado é [`@breezystack/lamejs`](https://github.com/shijinyu/lamejs), distribuído sob LGPL-3.0.
+
+## VST2 master
+
+- O host procura plugins VST2 de 64 bits nas pastas comuns do Windows, incluindo `C:\\Program Files\\VstPlugins`.
+- O efeito fica depois dos volumes individuais e antes da saída, portanto uma única instância processa todas as faixas.
+- O editor fornecido pelo plugin é hospedado em uma janela nativa independente, como em hosts de áudio tradicionais.
+- O processamento usa blocos de 2048 frames para atravessar com estabilidade a ponte entre o `AudioWorklet` e o processo principal. Isso adiciona aproximadamente 43 ms de latência a 48 kHz.
+- Plugins VST3 ainda não são carregados; o suporte atual é para DLLs VST2.
 
 ## Latência e estabilidade
 
@@ -82,6 +92,7 @@ Um ajuste razoável é começar em modo `interactive`, medir `baseLatency` no co
 ## Estrutura
 
 - `src/main/` — janela Electron e permissões de mídia.
+- `src/main/vst/` — host VST2 nativo, processamento e janela do editor do plugin.
 - `src/preload/` — ponte segura entre processos.
 - `src/renderer/audio/ClockEngine.ts` — transporte, grid, metrônomo e eventos musicais.
 - `src/renderer/audio/audioEngine.ts` — roteamento, filas quantizadas e reprodução sincronizada.

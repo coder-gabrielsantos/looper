@@ -8,6 +8,7 @@ import ClockControls from './components/ClockControls'
 import CycleProgress from './components/CycleProgress'
 import InputSelector from './components/InputSelector'
 import LoopTrack from './components/LoopTrack'
+import PluginSelector from './components/PluginSelector'
 
 const INITIAL_TRACK_STATES: Record<TrackId, TrackState> = {
   0: TrackState.IDLE,
@@ -150,6 +151,10 @@ export default function App() {
         <section className={styles.masterSection}>
           <ClockControls locked={gridLocked} onError={setError} />
           <CycleProgress />
+          <PluginSelector
+            disabled={!ready || exportState === 'exporting'}
+            onError={setError}
+          />
         </section>
 
         {error && (

@@ -1,0 +1,185 @@
+.panel {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  min-height: 72px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 15px;
+  border-right: 1px solid var(--line-soft);
+}
+
+.heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.eyebrow,
+.scope,
+.status,
+.unavailable {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.eyebrow {
+  color: var(--text-dim);
+}
+
+.scope,
+.status,
+.unavailable {
+  color: var(--text-faint);
+}
+
+.status.active {
+  color: var(--cyan);
+}
+
+.unavailable {
+  align-self: center;
+  padding: 0 16px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 146px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.selectRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.selectRoot {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.selectRoot :global(.pluginSelect__control) {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-raised);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.selectRoot :global(.pluginSelect__control:hover),
+.selectRoot :global(.pluginSelect__control--is-focused) {
+  border-color: rgba(114, 212, 205, 0.5);
+  box-shadow: none;
+}
+
+.selectRoot :global(.pluginSelect__single-value),
+.selectRoot :global(.pluginSelect__input-container) {
+  color: var(--text);
+}
+
+.selectRoot :global(.pluginSelect__value-container) {
+  padding-inline: 11px;
+}
+
+.selectRoot :global(.pluginSelect__menu) {
+  z-index: 200;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-raised);
+}
+
+.selectRoot :global(.pluginSelect__option) {
+  padding: 8px 11px;
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.selectRoot :global(.pluginSelect__option--is-focused) {
+  background: var(--line-soft);
+  color: var(--text);
+}
+
+.selectRoot :global(.pluginSelect__option--is-selected) {
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.selectRoot :global(.pluginSelect__indicator-separator) {
+  display: none;
+}
+
+.chevron {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 8px;
+  border-top: 5px solid var(--text-faint);
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.scanButton,
+.editorButton {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.scanButton:hover:not(:disabled),
+.editorButton:hover:not(:disabled) {
+  border-color: rgba(114, 212, 205, 0.5);
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.scanButton:disabled,
+.editorButton:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.optionLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.formatBadge {
+  flex-shrink: 0;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 980px) {
+  .panel {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+
+  .controls {
+    grid-template-columns: minmax(0, 1fr) 126px;
+  }
+}

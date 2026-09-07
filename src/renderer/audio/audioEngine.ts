@@ -1,6 +1,8 @@
 import { ClockEngine, CycleEndEvent, getClockEngine } from './ClockEngine'
 import { encodeMp3 } from './mp3Encoder'
-import { TrackId, TrackState } from './types'
+import { TrackId, TrackState, VstEditorResult, VstLoadedPlugin } from './types'
+
+const MASTER_PLUGIN_BLOCK_SIZE = 2048
 
 interface TrackEngine {
   state: TrackState
@@ -34,6 +36,10 @@ export class AudioEngine {
   private micStream: MediaStream | null = null
   private micSource: MediaStreamAudioSourceNode | null = null
   private currentDeviceId: string | null = null
+  private masterInputNode: GainNode | null = null
+  private masterPluginNode: AudioWorkletNode | null = null
+  private masterPluginHandle: number | null = null
+  private masterPluginPath: string | null = null
   private tracks: Map<TrackId, TrackEngine> = new Map()
   private levelCallbacks: Map<TrackId, (level: number) => void> = new Map()
   private stateCallbacks: Map<TrackId, (state: TrackState) => void> = new Map()
@@ -42,6 +48,7 @@ export class AudioEngine {
   private lifecycleId = 0
   private clock: ClockEngine = getClockEngine()
   private clockUnsubscribe: (() => void) | null = null
+  private clockStateUnsubscribe: (() => void) | null = null
   private nextExportRequestId = 1
   private pendingExports = new Map<number, PendingExport>()
 
@@ -61,13 +68,128 @@ export class AudioEngine {
     }
   }
 
+  async setMasterPlugin(pluginPath: string | null): Promise<VstLoadedPlugin | null> {
+    if (!this.context || !this.masterInputNode || !this.initialized) {
+      throw new Error('Audio engine is not ready.')
+    }
+    const vst = window.electronAPI?.vst
+    if (!vst) throw new Error('VST2 support is not available.')
+
+    if (pluginPath === null) {
+      await this.removeMasterPlugin()
+      return null
+    }
+
+    const loaded = await vst.loadPlugin(
+      pluginPath,
+      this.context.sampleRate,
+      MASTER_PLUGIN_BLOCK_SIZE
+    )
+    await vst.setTempo(loaded.handle, this.clock.getState().bpm).catch(() => undefined)
+
+    const pluginNode = new AudioWorkletNode(this.context, 'plugin-insert-processor', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+      channelCount: 1,
+      channelCountMode: 'explicit',
+      processorOptions: { chunkSize: MASTER_PLUGIN_BLOCK_SIZE }
+    })
+
+    pluginNode.port.onmessage = async (event: MessageEvent) => {
+      if (event.data.type !== 'process-audio') return
+
+      const input = event.data.input as Float32Array
+      let output: Float32Array
+      try {
+        output = await vst.processAudio(loaded.handle, input)
+      } catch {
+        output = input
+      }
+
+      if (this.masterPluginNode !== pluginNode) return
+      pluginNode.port.postMessage(
+        { type: 'audio-response', requestId: event.data.requestId, output },
+        [output.buffer]
+      )
+    }
+
+    pluginNode.port.postMessage({ type: 'set-active', active: true })
+
+    // Every track reaches this node after its individual gain, so the VST is a master insert.
+    const previousNode = this.masterPluginNode
+    const previousHandle = this.masterPluginHandle
+    const previousPath = this.masterPluginPath
+
+    try {
+      this.masterInputNode.disconnect()
+      this.masterInputNode.connect(pluginNode)
+      pluginNode.connect(this.context.destination)
+
+      this.masterPluginNode = pluginNode
+      this.masterPluginHandle = loaded.handle
+      this.masterPluginPath = pluginPath
+
+      if (previousNode) {
+        previousNode.port.onmessage = null
+        previousNode.disconnect()
+      }
+      if (previousHandle !== null) {
+        await vst.unloadPlugin(previousHandle).catch(() => undefined)
+      }
+      return loaded
+    } catch (error) {
+      this.masterPluginNode = previousNode
+      this.masterPluginHandle = previousHandle
+      this.masterPluginPath = previousPath
+      pluginNode.port.postMessage({ type: 'set-active', active: false })
+      pluginNode.disconnect()
+      this.masterInputNode.disconnect()
+      this.masterInputNode.connect(previousNode ?? this.context.destination)
+      await vst.unloadPlugin(loaded.handle).catch(() => undefined)
+      throw error
+    }
+  }
+
+  async openMasterPluginEditor(): Promise<VstEditorResult> {
+    if (this.masterPluginHandle === null || !window.electronAPI?.vst) {
+      return { opened: false, hasEditor: false, width: 0, height: 0 }
+    }
+    return window.electronAPI.vst.openEditor(this.masterPluginHandle)
+  }
+
+  private async removeMasterPlugin(): Promise<void> {
+    const vst = window.electronAPI?.vst
+    const previousNode = this.masterPluginNode
+    const previousHandle = this.masterPluginHandle
+
+    this.masterPluginNode = null
+    this.masterPluginHandle = null
+    this.masterPluginPath = null
+
+    if (previousNode) {
+      previousNode.port.postMessage({ type: 'set-active', active: false })
+      previousNode.port.onmessage = null
+      previousNode.disconnect()
+    }
+    if (this.masterInputNode && this.context) {
+      this.masterInputNode.disconnect()
+      this.masterInputNode.connect(this.context.destination)
+    }
+    if (previousHandle !== null && vst) await vst.unloadPlugin(previousHandle)
+  }
+
   private async initialize(lifecycleId: number): Promise<void> {
     const context = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' })
     let micStream: MediaStream | null = null
 
     try {
       const recorderUrl = new URL('./worklets/recorder-processor.js', import.meta.url).href
-      await context.audioWorklet.addModule(recorderUrl)
+      const pluginUrl = new URL('./worklets/plugin-insert-processor.js', import.meta.url).href
+      await Promise.all([
+        context.audioWorklet.addModule(recorderUrl),
+        context.audioWorklet.addModule(pluginUrl)
+      ])
       this.ensureCurrentLifecycle(lifecycleId)
 
       micStream = await navigator.mediaDevices.getUserMedia({
@@ -80,6 +202,9 @@ export class AudioEngine {
       this.ensureCurrentLifecycle(lifecycleId)
 
       const micSource = context.createMediaStreamSource(micStream)
+      const masterInputNode = context.createGain()
+      masterInputNode.gain.value = 1
+      masterInputNode.connect(context.destination)
       const tracks = new Map<TrackId, TrackEngine>()
       const initialTrackIds = new Set<TrackId>([
         0,
@@ -89,17 +214,24 @@ export class AudioEngine {
       ])
 
       for (const id of initialTrackIds) {
-        tracks.set(id, this.createTrack(context, id))
+        tracks.set(id, this.createTrack(context, id, masterInputNode))
       }
 
       this.context = context
       this.micStream = micStream
       this.micSource = micSource
+      this.masterInputNode = masterInputNode
       this.currentDeviceId = micStream.getAudioTracks()[0]?.getSettings().deviceId ?? null
       this.tracks = tracks
       this.clock.init(context)
       this.clockUnsubscribe?.()
       this.clockUnsubscribe = this.clock.on('cycle-end', (event) => this.handleCycleEnd(event))
+      this.clockStateUnsubscribe?.()
+      this.clockStateUnsubscribe = this.clock.on('state', ({ bpm }) => {
+        if (this.masterPluginHandle !== null && window.electronAPI?.vst) {
+          void window.electronAPI.vst.setTempo(this.masterPluginHandle, bpm).catch(() => undefined)
+        }
+      })
       this.initialized = true
     } catch (err) {
       micStream?.getTracks().forEach((track) => track.stop())
@@ -120,10 +252,14 @@ export class AudioEngine {
     }
   }
 
-  private createTrack(context: AudioContext, trackId: TrackId): TrackEngine {
+  private createTrack(
+    context: AudioContext,
+    trackId: TrackId,
+    masterInputNode: AudioNode
+  ): TrackEngine {
     const gainNode = context.createGain()
     gainNode.gain.value = 0.8
-    gainNode.connect(context.destination)
+    gainNode.connect(masterInputNode)
 
     return {
       state: TrackState.IDLE,
@@ -146,7 +282,8 @@ export class AudioEngine {
     if (current) return current
     if (!this.context || !this.initialized) return null
 
-    const track = this.createTrack(this.context, trackId)
+    if (!this.masterInputNode) return null
+    const track = this.createTrack(this.context, trackId, this.masterInputNode)
     this.tracks.set(trackId, track)
     return track
   }
@@ -382,14 +519,61 @@ export class AudioEngine {
       }
     }
 
+    const processedMix = await this.renderMasterPluginForExport(mix)
+
     let peak = 0
-    for (const sample of mix) peak = Math.max(peak, Math.abs(sample))
+    for (const sample of processedMix) peak = Math.max(peak, Math.abs(sample))
     if (peak > 0.98) {
       const gain = 0.98 / peak
-      for (let frame = 0; frame < mix.length; frame += 1) mix[frame] *= gain
+      for (let frame = 0; frame < processedMix.length; frame += 1) {
+        processedMix[frame] *= gain
+      }
     }
 
-    return encodeMp3(mix, this.context.sampleRate)
+    return encodeMp3(processedMix, this.context.sampleRate)
+  }
+
+  private async renderMasterPluginForExport(input: Float32Array): Promise<Float32Array> {
+    const vst = window.electronAPI?.vst
+    const pluginPath = this.masterPluginPath
+    const liveHandle = this.masterPluginHandle
+    if (!vst || !pluginPath || liveHandle === null || input.length === 0 || !this.context) {
+      return input
+    }
+
+    const renderPlugin = await vst.loadPlugin(
+      pluginPath,
+      this.context.sampleRate,
+      MASTER_PLUGIN_BLOCK_SIZE
+    )
+
+    try {
+      await vst.setTempo(renderPlugin.handle, this.clock.getState().bpm)
+      const parameters = await vst.getParameters(liveHandle)
+      await Promise.all(
+        parameters.map(({ index, value }) => vst.setParameter(renderPlugin.handle, index, value))
+      )
+
+      // Feed two cycles and keep the second so time-based effects have a warm loop state.
+      const repeatedInput = new Float32Array(input.length * 2)
+      repeatedInput.set(input)
+      repeatedInput.set(input, input.length)
+      const repeatedOutput = new Float32Array(repeatedInput.length)
+
+      for (let offset = 0; offset < repeatedInput.length; offset += MASTER_PLUGIN_BLOCK_SIZE) {
+        const chunk = new Float32Array(MASTER_PLUGIN_BLOCK_SIZE)
+        chunk.set(repeatedInput.subarray(offset, offset + MASTER_PLUGIN_BLOCK_SIZE))
+        const processed = await vst.processAudio(renderPlugin.handle, chunk)
+        repeatedOutput.set(
+          processed.subarray(0, Math.min(processed.length, repeatedOutput.length - offset)),
+          offset
+        )
+      }
+
+      return repeatedOutput.slice(input.length)
+    } finally {
+      await vst.unloadPlugin(renderPlugin.handle).catch(() => undefined)
+    }
   }
 
   getTrackState(trackId: TrackId): TrackState {
@@ -537,6 +721,8 @@ export class AudioEngine {
     this.initializationPromise = null
     this.clockUnsubscribe?.()
     this.clockUnsubscribe = null
+    this.clockStateUnsubscribe?.()
+    this.clockStateUnsubscribe = null
 
     for (const pending of this.pendingExports.values()) {
       window.clearTimeout(pending.timeoutId)
@@ -548,6 +734,13 @@ export class AudioEngine {
       this.stopTrackNodes(track)
       track.gainNode.disconnect()
     }
+    this.masterPluginNode?.port.postMessage({ type: 'set-active', active: false })
+    if (this.masterPluginNode) this.masterPluginNode.port.onmessage = null
+    this.masterPluginNode?.disconnect()
+    this.masterInputNode?.disconnect()
+    if (this.masterPluginHandle !== null && window.electronAPI?.vst) {
+      void window.electronAPI.vst.unloadPlugin(this.masterPluginHandle).catch(() => undefined)
+    }
     this.clock.dispose()
     this.micStream?.getTracks().forEach((track) => track.stop())
     void this.context?.close().catch(() => undefined)
@@ -556,6 +749,10 @@ export class AudioEngine {
     this.micStream = null
     this.micSource = null
     this.currentDeviceId = null
+    this.masterInputNode = null
+    this.masterPluginNode = null
+    this.masterPluginHandle = null
+    this.masterPluginPath = null
     this.initialized = false
   }
 }
