@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import { setupMediaPermissions } from './mediaPermission'
 import { IPC_CHANNELS } from '../shared/ipc'
@@ -37,6 +38,29 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC_CHANNELS.GET_APP_PATH, () => {
     return app.getAppPath()
   })
+
+  ipcMain.handle(
+    IPC_CHANNELS.SAVE_MP3,
+    async (_event, audioData: Uint8Array, suggestedName: string) => {
+      const options = {
+        title: 'Export loop mixdown',
+        defaultPath: suggestedName,
+        filters: [{ name: 'MP3 Audio', extensions: ['mp3'] }],
+        properties: ['createDirectory', 'showOverwriteConfirmation'] as const
+      }
+      const result = mainWindow
+        ? await dialog.showSaveDialog(mainWindow, options)
+        : await dialog.showSaveDialog(options)
+
+      if (result.canceled || !result.filePath) return { saved: false }
+
+      const filePath = result.filePath.toLowerCase().endsWith('.mp3')
+        ? result.filePath
+        : `${result.filePath}.mp3`
+      await writeFile(filePath, Buffer.from(audioData))
+      return { saved: true, filePath }
+    }
+  )
 
   createWindow()
 

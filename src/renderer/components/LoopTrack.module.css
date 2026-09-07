@@ -29,7 +29,7 @@
 
 .header,
 .footer,
-.state,
+.stateButton,
 .recordButton,
 .meterGroup,
 .volumeGroup {
@@ -71,10 +71,20 @@
   text-transform: uppercase;
 }
 
-.state {
+.stateButton {
+  justify-content: center;
   gap: 7px;
+  min-width: 76px;
+  min-height: 28px;
+  padding: 6px 9px;
+  border-radius: 2px;
+  background: transparent;
   color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
   white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
 }
 
 .stateMark {
@@ -83,17 +93,39 @@
   background: currentColor;
 }
 
-.standby .state {
+.standby .stateButton {
   color: var(--amber);
 }
 
-.recording .state,
-.playing .state {
+.recording .stateButton,
+.playing .stateButton {
   color: var(--cyan);
 }
 
+.playing .stateButton:hover:not(:disabled) {
+  background: var(--cyan-soft);
+}
+
+.paused {
+  border-top-color: var(--amber);
+}
+
+.paused .stateButton {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.paused .stateButton:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.stateButton:disabled {
+  cursor: default;
+}
+
 .standby .stateMark,
-.recording .stateMark {
+.recording .stateMark,
+.paused .stateMark {
   animation: softPulse 1.15s ease-in-out infinite;
 }
 

@@ -30,7 +30,6 @@
   object-position: left center;
 }
 
-.systemState,
 .sectionTitle,
 .appFooter {
   color: var(--text-faint);
@@ -44,22 +43,47 @@
   gap: 24px;
 }
 
-.systemState {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
+.exportButton {
+  min-width: 112px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.11em;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, opacity 160ms ease;
 }
 
-.systemState::before {
-  width: 5px;
-  height: 5px;
-  background: var(--text-faint);
-  content: '';
+.exportButton:hover:not(:disabled) {
+  border-color: rgba(114, 212, 205, 0.48);
+  background: var(--cyan-soft);
+  color: var(--cyan);
 }
 
-.systemState.ready::before {
-  background: var(--cyan);
+.exportButton:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.exportButton.exporting {
+  border-color: rgba(216, 170, 101, 0.4);
+  color: var(--amber);
+  opacity: 1;
+  animation: exportPulse 1.1s ease-in-out infinite;
+}
+
+.exportButton.complete {
+  border-color: rgba(114, 212, 205, 0.48);
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+@keyframes exportPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .main {

@@ -15,10 +15,17 @@ const INITIAL_TRACK_STATES: Record<TrackId, TrackState> = {
 }
 
 const INITIAL_TRACK_IDS: TrackId[] = [0, 1]
+type ExportState = 'idle' | 'exporting' | 'complete'
 
 function getTrackLabel(trackId: TrackId): string {
   if (trackId < 26) return `Track ${String.fromCharCode(65 + trackId)}`
   return `Track ${trackId + 1}`
+}
+
+function getExportFileName(): string {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `looper-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.mp3`
 }
 
 export default function App() {
@@ -26,6 +33,7 @@ export default function App() {
   const [ready, setReady] = useState(false)
   const [trackStates, setTrackStates] = useState(INITIAL_TRACK_STATES)
   const [trackIds, setTrackIds] = useState<TrackId[]>(INITIAL_TRACK_IDS)
+  const [exportState, setExportState] = useState<ExportState>('idle')
 
   useEffect(() => {
     let active = true
@@ -79,10 +87,40 @@ export default function App() {
     })
   }, [])
 
+  const handleExport = useCallback(async () => {
+    setExportState('exporting')
+    setError(null)
+
+    try {
+      const mp3 = await getAudioEngine().exportMp3()
+      const result = await window.electronAPI.saveMp3(mp3, getExportFileName())
+      if (!result.saved) {
+        setExportState('idle')
+        return
+      }
+
+      setExportState('complete')
+      window.setTimeout(() => setExportState('idle'), 1800)
+    } catch (err) {
+      setExportState('idle')
+      setError(err instanceof Error ? err.message : 'Could not export the MP3 file.')
+    }
+  }, [])
+
   const gridLocked = trackIds.some(
     (trackId) => (trackStates[trackId] ?? TrackState.IDLE) !== TrackState.IDLE
   )
   const nextTrackId = (trackIds.at(-1) ?? -1) + 1
+  const canExport = trackIds.some(
+    (trackId) =>
+      trackStates[trackId] === TrackState.PLAYING ||
+      trackStates[trackId] === TrackState.PAUSED
+  )
+  const exportBlocked = trackIds.some(
+    (trackId) =>
+      trackStates[trackId] === TrackState.STANDBY ||
+      trackStates[trackId] === TrackState.RECORDING
+  )
 
   return (
     <div className={styles.app}>
@@ -92,9 +130,19 @@ export default function App() {
         </div>
         <div className={styles.headerTools}>
           <InputSelector ready={ready} />
-          <span className={`${styles.systemState} ${ready ? styles.ready : ''}`}>
-            {ready ? 'AUDIO READY' : error ? 'AUDIO ERROR' : 'INITIALIZING'}
-          </span>
+          <button
+            className={`${styles.exportButton} ${exportState === 'exporting' ? styles.exporting : ''} ${exportState === 'complete' ? styles.complete : ''}`}
+            type="button"
+            onClick={handleExport}
+            disabled={!ready || !canExport || exportBlocked || exportState === 'exporting'}
+            title={canExport ? 'Export recorded tracks as MP3' : 'Record a complete track to export'}
+          >
+            {exportState === 'exporting'
+              ? 'ENCODING…'
+              : exportState === 'complete'
+                ? 'EXPORTED'
+                : 'EXPORT MP3'}
+          </button>
         </div>
       </header>
 

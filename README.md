@@ -31,6 +31,8 @@ npm run build
 7. A captura começa somente quando o ciclo global atual termina. Todas as faixas usam a mesma fronteira de ciclo, inclusive a primeira.
 8. Ao completar um ciclo inteiro de gravação, o próprio `AudioWorklet` troca de captura para reprodução no mesmo frame, sem depender da thread da interface.
 9. Pressione **REPLACE** para substituir uma faixa. O loop anterior continua tocando até o novo take assumir no fim do ciclo.
+10. Use **PAUSE** no cabeçalho de uma faixa para silenciá-la. O playhead continua seguindo o grid global e **RESUME** devolve o áudio já na fase correta.
+11. Use **EXPORT MP3** para gerar um mixdown de um ciclo completo. Escolha o destino no diálogo de salvamento do sistema.
 
 Enquanto houver uma faixa armada, gravando ou tocando, BPM e duração do ciclo ficam bloqueados. Isso evita alterar a duração física de buffers já gravados e mantém a fase entre todas as faixas. Limpe as faixas para configurar um novo grid.
 
@@ -43,6 +45,15 @@ Enquanto houver uma faixa armada, gravando ou tocando, BPM e duração do ciclo 
 - No frame final, o mesmo processor muda para reprodução e começa pela primeira amostra do take. A thread da interface apenas recebe os estados visuais; atrasos de React ou `setTimeout` não alteram o áudio.
 - A compensação automática soma a latência informada pela entrada, `baseLatency` e `outputLatency`. O processor desloca o conteúdo por essa quantidade e captura uma pequena cauda após a borda, enquanto a reprodução já está ativa, preservando o fim do take.
 - Todas as faixas compartilham o mesmo `ClockEngine`, âncora de ciclo e `AudioContext` de 48 kHz.
+
+## Exportação MP3
+
+- O botão de exportação fica disponível após pelo menos uma faixa completar a gravação.
+- Cada worklet entrega uma cópia do loop começando no primeiro frame musical, independentemente da posição atual de reprodução.
+- O mixdown respeita o volume individual das faixas e repete buffers menores quando necessário para preencher o maior ciclo.
+- Picos acima de `0.98` são normalizados antes da codificação para evitar clipping digital.
+- A codificação mono em 192 kbps acontece em um Web Worker, mantendo a interface responsiva.
+- O encoder utilizado é [`@breezystack/lamejs`](https://github.com/shijinyu/lamejs), distribuído sob LGPL-3.0.
 
 ## Latência e estabilidade
 

@@ -1,8 +1,10 @@
 import { ClockEngine, CycleEndEvent, getClockEngine } from './ClockEngine'
+import { encodeMp3 } from './mp3Encoder'
 import { TrackId, TrackState } from './types'
 
 interface TrackEngine {
   state: TrackState
+  paused: boolean
   volume: number
   level: number
   gainNode: GainNode
@@ -13,6 +15,13 @@ interface TrackEngine {
   capturingTail: boolean
   onLevelChange: ((level: number) => void) | null
   onStateChange: ((state: TrackState) => void) | null
+}
+
+interface PendingExport {
+  trackId: TrackId
+  resolve: (samples: Float32Array) => void
+  reject: (error: Error) => void
+  timeoutId: number
 }
 
 export interface InputDevice {
@@ -33,6 +42,8 @@ export class AudioEngine {
   private lifecycleId = 0
   private clock: ClockEngine = getClockEngine()
   private clockUnsubscribe: (() => void) | null = null
+  private nextExportRequestId = 1
+  private pendingExports = new Map<number, PendingExport>()
 
   async init(): Promise<void> {
     if (this.initialized) return
@@ -116,6 +127,7 @@ export class AudioEngine {
 
     return {
       state: TrackState.IDLE,
+      paused: false,
       volume: 0.8,
       level: 0,
       gainNode,
@@ -210,6 +222,20 @@ export class AudioEngine {
     const previousLoopNode = track.loopNode
 
     nextLoopNode.port.onmessage = (event) => {
+      if (event.data.type === 'export-buffer' || event.data.type === 'export-error') {
+        const pending = this.pendingExports.get(event.data.requestId)
+        if (!pending) return
+        window.clearTimeout(pending.timeoutId)
+        this.pendingExports.delete(event.data.requestId)
+
+        if (event.data.type === 'export-error') {
+          pending.reject(new Error('The track buffer is not ready for export.'))
+        } else {
+          pending.resolve(event.data.samples as Float32Array)
+        }
+        return
+      }
+
       if (event.data.type === 'playback-stopped') {
         if (track.retiringLoopNode === nextLoopNode) {
           this.disconnectLoopNode(nextLoopNode)
@@ -250,7 +276,14 @@ export class AudioEngine {
     track.pendingStartTime = null
     track.recordingEndTime = endTime
     track.capturingTail = true
-    track.gainNode.gain.setTargetAtTime(track.volume, this.context.currentTime, 0.01)
+    if (track.paused) {
+      track.gainNode.gain.cancelScheduledValues(this.context.currentTime)
+      track.gainNode.gain.setValueAtTime(0, this.context.currentTime)
+      track.gainNode.gain.setValueAtTime(track.volume, endTime)
+      track.paused = false
+    } else {
+      track.gainNode.gain.setTargetAtTime(track.volume, this.context.currentTime, 0.01)
+    }
     nextLoopNode.port.postMessage({ command: 'schedule', startFrame, endFrame, latencyFrames })
   }
 
@@ -258,7 +291,26 @@ export class AudioEngine {
     const track = this.tracks.get(trackId)
     if (!track || !this.context) return
     track.volume = Math.max(0, Math.min(1, value))
-    track.gainNode.gain.setTargetAtTime(track.volume, this.context.currentTime, 0.01)
+    track.gainNode.gain.setTargetAtTime(
+      track.paused ? 0 : track.volume,
+      this.context.currentTime,
+      0.01
+    )
+  }
+
+  toggleTrackPlayback(trackId: TrackId): void {
+    const track = this.tracks.get(trackId)
+    if (!track || !this.context) return
+
+    if (track.state === TrackState.PLAYING) {
+      track.paused = true
+      track.gainNode.gain.setTargetAtTime(0, this.context.currentTime, 0.008)
+      this.setTrackState(track, TrackState.PAUSED)
+    } else if (track.state === TrackState.PAUSED) {
+      track.paused = false
+      track.gainNode.gain.setTargetAtTime(track.volume, this.context.currentTime, 0.008)
+      this.setTrackState(track, TrackState.PLAYING)
+    }
   }
 
   clearTrack(trackId: TrackId): void {
@@ -268,7 +320,11 @@ export class AudioEngine {
     track.pendingStartTime = null
     track.recordingEndTime = null
     track.capturingTail = false
+    track.paused = false
     this.stopTrackNodes(track)
+    if (this.context) {
+      track.gainNode.gain.setTargetAtTime(track.volume, this.context.currentTime, 0.008)
+    }
     track.level = 0
     this.setTrackState(track, TrackState.IDLE)
     track.onLevelChange?.(0)
@@ -283,6 +339,57 @@ export class AudioEngine {
     this.tracks.delete(trackId)
     this.levelCallbacks.delete(trackId)
     this.stateCallbacks.delete(trackId)
+    this.cancelPendingExports(trackId, 'The track was removed during export.')
+  }
+
+  async exportMp3(): Promise<Uint8Array> {
+    if (!this.context || !this.initialized) throw new Error('Audio engine is not ready.')
+
+    if (
+      [...this.tracks.values()].some(
+        (track) =>
+          track.state === TrackState.STANDBY ||
+          track.state === TrackState.RECORDING ||
+          track.capturingTail
+      )
+    ) {
+      throw new Error('Wait for all recordings to finish before exporting.')
+    }
+
+    const exportableTracks = [...this.tracks.entries()].filter(
+      ([, track]) =>
+        (track.state === TrackState.PLAYING || track.state === TrackState.PAUSED) &&
+        track.loopNode !== null
+    )
+    if (exportableTracks.length === 0) {
+      throw new Error('Record at least one complete track before exporting.')
+    }
+
+    const trackBuffers = await Promise.all(
+      exportableTracks.map(async ([trackId, track]) => ({
+        samples: await this.requestTrackSamples(trackId, track),
+        volume: track.volume
+      }))
+    )
+    const frameCount = Math.max(...trackBuffers.map(({ samples }) => samples.length))
+    if (frameCount === 0) throw new Error('The recorded tracks are empty.')
+
+    const mix = new Float32Array(frameCount)
+    for (const { samples, volume } of trackBuffers) {
+      if (samples.length === 0) continue
+      for (let frame = 0; frame < frameCount; frame += 1) {
+        mix[frame] += samples[frame % samples.length] * volume
+      }
+    }
+
+    let peak = 0
+    for (const sample of mix) peak = Math.max(peak, Math.abs(sample))
+    if (peak > 0.98) {
+      const gain = 0.98 / peak
+      for (let frame = 0; frame < mix.length; frame += 1) mix[frame] *= gain
+    }
+
+    return encodeMp3(mix, this.context.sampleRate)
   }
 
   getTrackState(trackId: TrackId): TrackState {
@@ -335,6 +442,33 @@ export class AudioEngine {
   private disconnectLoopNode(node: AudioWorkletNode): void {
     node.port.onmessage = null
     node.disconnect()
+  }
+
+  private requestTrackSamples(trackId: TrackId, track: TrackEngine): Promise<Float32Array> {
+    const node = track.loopNode
+    if (!node) return Promise.reject(new Error('The track has no recorded loop.'))
+
+    const requestId = this.nextExportRequestId
+    this.nextExportRequestId += 1
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        this.pendingExports.delete(requestId)
+        reject(new Error('Timed out while reading a recorded track.'))
+      }, 5000)
+
+      this.pendingExports.set(requestId, { trackId, resolve, reject, timeoutId })
+      node.port.postMessage({ command: 'export-buffer', requestId })
+    })
+  }
+
+  private cancelPendingExports(trackId: TrackId, message: string): void {
+    for (const [requestId, pending] of this.pendingExports) {
+      if (pending.trackId !== trackId) continue
+      window.clearTimeout(pending.timeoutId)
+      pending.reject(new Error(message))
+      this.pendingExports.delete(requestId)
+    }
   }
 
   private setTrackState(track: TrackEngine, state: TrackState): void {
@@ -403,6 +537,12 @@ export class AudioEngine {
     this.initializationPromise = null
     this.clockUnsubscribe?.()
     this.clockUnsubscribe = null
+
+    for (const pending of this.pendingExports.values()) {
+      window.clearTimeout(pending.timeoutId)
+      pending.reject(new Error('Audio engine was disposed during export.'))
+    }
+    this.pendingExports.clear()
 
     for (const [, track] of this.tracks) {
       this.stopTrackNodes(track)

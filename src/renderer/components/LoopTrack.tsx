@@ -18,14 +18,16 @@ const STATE_LABELS: Record<TrackState, string> = {
   [TrackState.IDLE]: 'READY',
   [TrackState.STANDBY]: 'WAITING FOR GRID',
   [TrackState.RECORDING]: 'CAPTURING',
-  [TrackState.PLAYING]: 'LOOPING'
+  [TrackState.PLAYING]: 'PAUSE',
+  [TrackState.PAUSED]: 'RESUME'
 }
 
 const ACTION_LABELS: Record<TrackState, string> = {
   [TrackState.IDLE]: 'ARM',
   [TrackState.STANDBY]: 'QUEUED',
   [TrackState.RECORDING]: 'RECORDING',
-  [TrackState.PLAYING]: 'REPLACE'
+  [TrackState.PLAYING]: 'REPLACE',
+  [TrackState.PAUSED]: 'REPLACE'
 }
 
 export default function LoopTrack({
@@ -73,6 +75,10 @@ export default function LoopTrack({
     getAudioEngine().clearTrack(trackId)
   }, [trackId])
 
+  const handleTogglePlayback = useCallback(() => {
+    getAudioEngine().toggleTrackPlayback(trackId)
+  }, [trackId])
+
   const handleRemove = useCallback(() => {
     onRemove(trackId)
   }, [onRemove, trackId])
@@ -95,10 +101,18 @@ export default function LoopTrack({
           <span className={styles.number}>{String(trackId + 1).padStart(2, '0')}</span>
           <h2 className={styles.title}>{label}</h2>
         </div>
-        <div className={styles.state}>
+        <button
+          className={styles.stateButton}
+          type="button"
+          onClick={handleTogglePlayback}
+          disabled={
+            disabled || (state !== TrackState.PLAYING && state !== TrackState.PAUSED)
+          }
+          aria-label={state === TrackState.PAUSED ? `Resume ${label}` : `Pause ${label}`}
+        >
           <span className={styles.stateMark} />
           {STATE_LABELS[state]}
-        </div>
+        </button>
       </header>
 
       <div className={styles.meterGroup}>

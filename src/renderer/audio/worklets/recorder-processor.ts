@@ -17,7 +17,12 @@ interface CancelMessage {
   command: 'cancel'
 }
 
-type RecorderMessage = ScheduleMessage | StopAtMessage | CancelMessage
+interface ExportMessage {
+  command: 'export-buffer'
+  requestId: number
+}
+
+type RecorderMessage = ScheduleMessage | StopAtMessage | CancelMessage | ExportMessage
 type ProcessorMode = 'idle' | 'scheduled' | 'recording' | 'playing-tail' | 'playing' | 'stopped'
 
 class RecorderProcessor extends AudioWorkletProcessor {
@@ -50,6 +55,20 @@ class RecorderProcessor extends AudioWorkletProcessor {
       } else if (event.data.command === 'cancel') {
         this.mode = 'stopped'
         this.loopBuffer = null
+      } else if (event.data.command === 'export-buffer') {
+        if (!this.loopBuffer || this.loopLength === 0) {
+          this.port.postMessage({ type: 'export-error', requestId: event.data.requestId })
+          return
+        }
+
+        const samples = this.loopBuffer.slice(
+          this.latencyFrames,
+          this.latencyFrames + this.loopLength
+        )
+        this.port.postMessage(
+          { type: 'export-buffer', requestId: event.data.requestId, samples },
+          [samples.buffer]
+        )
       }
     }
   }
