@@ -1,51 +1,35 @@
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
-  padding: 22px 26px 16px;
-  overflow: auto;
+  height: 100%;
+  min-height: 0;
+  padding: 14px 26px 16px;
+  overflow: hidden;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 52px;
-  padding-bottom: 16px;
+  min-height: 66px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
 
 .brand,
-.headerTools,
-.brand > div {
+.headerTools {
   display: flex;
   align-items: center;
 }
 
-.brand {
-  gap: 13px;
+.brandLogo {
+  display: block;
+  width: 230px;
+  height: 58px;
+  object-fit: contain;
+  object-position: left center;
 }
 
-.brand > div {
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.brandMark {
-  width: 12px;
-  height: 30px;
-  background: linear-gradient(to bottom, var(--cyan) 0 35%, var(--line) 35% 48%, var(--amber) 48% 100%);
-}
-
-.brand h1 {
-  font-family: var(--mono);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-}
-
-.brand div > span,
 .systemState,
 .sectionTitle,
 .appFooter {
@@ -83,12 +67,13 @@
   flex: 1;
   flex-direction: column;
   gap: 15px;
+  min-height: 0;
   padding-top: 16px;
 }
 
 .masterSection {
   display: grid;
-  gap: 11px;
+  gap: 19px;
 }
 
 .error {
@@ -118,7 +103,7 @@
   flex: 1;
   flex-direction: column;
   gap: 9px;
-  min-height: 244px;
+  min-height: 0;
 }
 
 .sectionTitle,
@@ -131,8 +116,36 @@
 .tracks {
   display: grid;
   flex: 1;
+  grid-auto-rows: minmax(244px, 1fr);
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  min-height: 0;
+  padding-right: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--text-faint) transparent;
+  scrollbar-width: thin;
+}
+
+.tracks::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tracks::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tracks::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 1px;
+  background: var(--text-faint);
+  background-clip: padding-box;
+}
+
+.tracks::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+  background-clip: padding-box;
 }
 
 .appFooter {

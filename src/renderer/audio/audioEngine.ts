@@ -70,25 +70,15 @@ export class AudioEngine {
 
       const micSource = context.createMediaStreamSource(micStream)
       const tracks = new Map<TrackId, TrackEngine>()
+      const initialTrackIds = new Set<TrackId>([
+        0,
+        1,
+        ...this.levelCallbacks.keys(),
+        ...this.stateCallbacks.keys()
+      ])
 
-      for (const id of [0, 1, 2] as TrackId[]) {
-        const gainNode = context.createGain()
-        gainNode.gain.value = 0.8
-        gainNode.connect(context.destination)
-
-        tracks.set(id, {
-          state: TrackState.IDLE,
-          volume: 0.8,
-          level: 0,
-          gainNode,
-          loopNode: null,
-          retiringLoopNode: null,
-          pendingStartTime: null,
-          recordingEndTime: null,
-          capturingTail: false,
-          onLevelChange: this.levelCallbacks.get(id) ?? null,
-          onStateChange: this.stateCallbacks.get(id) ?? null
-        })
+      for (const id of initialTrackIds) {
+        tracks.set(id, this.createTrack(context, id))
       }
 
       this.context = context
@@ -119,6 +109,36 @@ export class AudioEngine {
     }
   }
 
+  private createTrack(context: AudioContext, trackId: TrackId): TrackEngine {
+    const gainNode = context.createGain()
+    gainNode.gain.value = 0.8
+    gainNode.connect(context.destination)
+
+    return {
+      state: TrackState.IDLE,
+      volume: 0.8,
+      level: 0,
+      gainNode,
+      loopNode: null,
+      retiringLoopNode: null,
+      pendingStartTime: null,
+      recordingEndTime: null,
+      capturingTail: false,
+      onLevelChange: this.levelCallbacks.get(trackId) ?? null,
+      onStateChange: this.stateCallbacks.get(trackId) ?? null
+    }
+  }
+
+  private ensureTrack(trackId: TrackId): TrackEngine | null {
+    const current = this.tracks.get(trackId)
+    if (current) return current
+    if (!this.context || !this.initialized) return null
+
+    const track = this.createTrack(this.context, trackId)
+    this.tracks.set(trackId, track)
+    return track
+  }
+
   private handleCycleEnd(event: CycleEndEvent): void {
     const tolerance = 1 / (this.context?.sampleRate ?? 48000)
     for (const [trackId, track] of this.tracks) {
@@ -138,7 +158,7 @@ export class AudioEngine {
     } else {
       this.levelCallbacks.delete(trackId)
     }
-    const track = this.tracks.get(trackId)
+    const track = callback ? this.ensureTrack(trackId) : this.tracks.get(trackId)
     if (track) track.onLevelChange = callback
   }
 
@@ -148,7 +168,7 @@ export class AudioEngine {
     } else {
       this.stateCallbacks.delete(trackId)
     }
-    const track = this.tracks.get(trackId)
+    const track = callback ? this.ensureTrack(trackId) : this.tracks.get(trackId)
     if (track) {
       track.onStateChange = callback
       callback?.(track.state)
@@ -252,6 +272,17 @@ export class AudioEngine {
     track.level = 0
     this.setTrackState(track, TrackState.IDLE)
     track.onLevelChange?.(0)
+  }
+
+  removeTrack(trackId: TrackId): void {
+    const track = this.tracks.get(trackId)
+    if (!track) return
+
+    this.stopTrackNodes(track)
+    track.gainNode.disconnect()
+    this.tracks.delete(trackId)
+    this.levelCallbacks.delete(trackId)
+    this.stateCallbacks.delete(trackId)
   }
 
   getTrackState(trackId: TrackId): TrackState {

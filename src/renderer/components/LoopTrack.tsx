@@ -11,6 +11,7 @@ interface LoopTrackProps {
   disabled?: boolean
   onError?: (message: string) => void
   onTrackStateChange?: (trackId: TrackId, state: TrackState) => void
+  onRemove: (trackId: TrackId) => void
 }
 
 const STATE_LABELS: Record<TrackState, string> = {
@@ -32,7 +33,8 @@ export default function LoopTrack({
   label,
   disabled = false,
   onError,
-  onTrackStateChange
+  onTrackStateChange,
+  onRemove
 }: LoopTrackProps) {
   const [state, setState] = useState<TrackState>(TrackState.IDLE)
   const [level, setLevel] = useState(0)
@@ -71,6 +73,10 @@ export default function LoopTrack({
     getAudioEngine().clearTrack(trackId)
   }, [trackId])
 
+  const handleRemove = useCallback(() => {
+    onRemove(trackId)
+  }, [onRemove, trackId])
+
   const handleVolumeChange = useCallback(
     (value: number) => {
       setVolume(value)
@@ -86,7 +92,7 @@ export default function LoopTrack({
     <article className={`${styles.track} ${styles[state]}`}>
       <header className={styles.header}>
         <div>
-          <span className={styles.number}>0{trackId + 1}</span>
+          <span className={styles.number}>{String(trackId + 1).padStart(2, '0')}</span>
           <h2 className={styles.title}>{label}</h2>
         </div>
         <div className={styles.state}>
@@ -117,13 +123,23 @@ export default function LoopTrack({
 
       <footer className={styles.footer}>
         <span>SYNC / MASTER</span>
-        <button
-          className={styles.clearButton}
-          onClick={handleClear}
-          disabled={disabled || busy || state === TrackState.IDLE}
-        >
-          CLEAR
-        </button>
+        <div className={styles.footerActions}>
+          <button
+            className={styles.clearButton}
+            onClick={handleClear}
+            disabled={disabled || busy || state === TrackState.IDLE}
+          >
+            CLEAR
+          </button>
+          <button
+            className={styles.removeButton}
+            onClick={handleRemove}
+            disabled={disabled || busy}
+            aria-label={`Remove ${label}`}
+          >
+            REMOVE
+          </button>
+        </div>
       </footer>
     </article>
   )

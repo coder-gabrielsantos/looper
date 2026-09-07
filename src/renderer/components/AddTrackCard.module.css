@@ -1,0 +1,81 @@
+.addTrack {
+  position: relative;
+  display: grid;
+  min-height: 244px;
+  place-content: center;
+  place-items: center;
+  gap: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.008);
+  color: var(--text-faint);
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.addTrack:hover:not(:disabled),
+.addTrack:focus-visible {
+  border-color: var(--text-faint);
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.addTrack:active:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.addTrack:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.number {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.plus {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+
+.plus::before,
+.plus::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: currentColor;
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.plus::before {
+  width: 30px;
+  height: 1px;
+}
+
+.plus::after {
+  width: 1px;
+  height: 30px;
+}
+
+.label,
+.hint {
+  font-family: var(--mono);
+  letter-spacing: 0.13em;
+}
+
+.label {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.hint {
+  color: var(--text-faint);
+  font-size: 7px;
+}

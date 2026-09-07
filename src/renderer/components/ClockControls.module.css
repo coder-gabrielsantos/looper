@@ -1,6 +1,6 @@
 .panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr) minmax(260px, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   min-height: 112px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -55,7 +55,7 @@
 
 .transport {
   display: grid;
-  grid-template-columns: 1fr 0.8fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .transport .sectionHeading {
@@ -110,32 +110,108 @@
 }
 
 .bpmReadout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
-  gap: 8px;
+  min-width: 0;
+  background: transparent;
 }
 
 .bpmReadout input {
-  width: 92px;
+  grid-column: 2;
+  width: 76px;
   border: 0;
-  border-bottom: 1px solid var(--line);
   outline: 0;
+  appearance: textfield;
   background: transparent;
   color: var(--text);
   font-family: var(--mono);
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1;
+  text-align: center;
 }
 
-.bpmReadout input::-webkit-inner-spin-button {
-  opacity: 0.3;
+.bpmReadout input::-webkit-inner-spin-button,
+.bpmReadout input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 .bpmReadout span {
+  grid-column: 3;
+  padding-left: 2px;
   color: var(--text-faint);
   font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.bpmControl {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.bpmStep {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-faint);
+  transition: color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+.bpmStep:hover:not(:disabled) {
+  background: var(--line-soft);
+  color: var(--text);
+}
+
+.bpmStep:active:not(:disabled) {
+  background: var(--line-soft);
+}
+
+.bpmStep:disabled {
+  opacity: 0.25;
+}
+
+.decreaseMark,
+.increaseMark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.increaseMark::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 12px;
+  background: currentColor;
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.tempoRange {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.tempoRange span {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.04em;
 }
 
 .tempoSlider {
@@ -194,6 +270,6 @@
 
 @media (max-width: 980px) {
   .panel {
-    grid-template-columns: 220px 1fr 270px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

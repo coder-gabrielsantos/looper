@@ -181,7 +181,7 @@
 }
 
 .clearButton {
-  padding: 4px 0 4px 10px;
+  padding: 4px 0;
   background: transparent;
   color: var(--text-dim);
   font-family: var(--mono);
@@ -195,6 +195,29 @@
 
 .clearButton:disabled {
   color: var(--text-faint);
+  opacity: 0.35;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.removeButton {
+  padding: 4px 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.removeButton:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.removeButton:disabled {
   opacity: 0.35;
 }
 

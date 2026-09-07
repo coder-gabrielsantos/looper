@@ -11,25 +11,116 @@
   letter-spacing: 0.11em;
 }
 
-.select {
-  width: 226px;
-  padding: 7px 24px 7px 8px;
-  border: 1px solid var(--line-soft);
-  border-radius: 2px;
-  outline: 0;
-  background: var(--surface);
-  color: var(--text-dim);
-  font-family: var(--mono);
-  font-size: 9px;
-  text-overflow: ellipsis;
+.selectRoot {
+  position: relative;
+  z-index: 10;
+  width: 240px;
 }
 
-.select:focus {
+.selectRoot :global(.inputSelect__control) {
+  min-height: 34px;
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  background: var(--surface);
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.selectRoot :global(.inputSelect__control:hover),
+.selectRoot :global(.inputSelect__control--is-focused) {
   border-color: var(--text-faint);
 }
 
-.select:disabled {
+.selectRoot :global(.inputSelect__control--is-focused) {
+  background: var(--surface-raised);
+  box-shadow: none;
+}
+
+.selectRoot :global(.inputSelect__value-container) {
+  min-width: 0;
+  padding: 0 10px;
+  overflow: hidden;
+}
+
+.selectRoot :global(.inputSelect__single-value),
+.selectRoot :global(.inputSelect__placeholder),
+.selectRoot :global(.inputSelect__option),
+.selectRoot :global(.inputSelect__no-options-message) {
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.selectRoot :global(.inputSelect__single-value),
+.selectRoot :global(.inputSelect__option) {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectRoot :global(.inputSelect__placeholder) {
+  color: var(--text-faint);
+}
+
+.selectRoot :global(.inputSelect__indicators) {
+  padding-right: 10px;
+}
+
+.selectRoot :global(.inputSelect__dropdown-indicator) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.selectRoot :global(.inputSelect__menu) {
+  overflow: hidden;
+  margin-top: 5px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-raised);
+  box-shadow: none;
+}
+
+.selectRoot :global(.inputSelect__menu-list) {
+  padding: 4px;
+}
+
+.selectRoot :global(.inputSelect__option) {
+  padding: 9px 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.selectRoot :global(.inputSelect__option--is-focused) {
+  background: var(--line-soft);
+  color: var(--text);
+}
+
+.selectRoot :global(.inputSelect__option--is-selected) {
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.selectRoot :global(.inputSelect__control--is-disabled) {
+  background: var(--surface);
   opacity: 0.45;
+}
+
+.selectRoot :global(.inputSelect__loading-indicator) {
+  color: var(--cyan);
+}
+
+.chevron {
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid var(--text-faint);
+  border-bottom: 1px solid var(--text-faint);
+  transform: translateY(-2px) rotate(45deg);
 }
 
 .error {

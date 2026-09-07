@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAudioEngine } from './audio/audioEngine'
 import { TrackId, TrackState } from './audio/types'
+import logoUrl from './assets/logo.svg'
 import styles from './App.module.css'
+import AddTrackCard from './components/AddTrackCard'
 import ClockControls from './components/ClockControls'
 import CycleProgress from './components/CycleProgress'
 import InputSelector from './components/InputSelector'
@@ -9,14 +11,21 @@ import LoopTrack from './components/LoopTrack'
 
 const INITIAL_TRACK_STATES: Record<TrackId, TrackState> = {
   0: TrackState.IDLE,
-  1: TrackState.IDLE,
-  2: TrackState.IDLE
+  1: TrackState.IDLE
+}
+
+const INITIAL_TRACK_IDS: TrackId[] = [0, 1]
+
+function getTrackLabel(trackId: TrackId): string {
+  if (trackId < 26) return `Track ${String.fromCharCode(65 + trackId)}`
+  return `Track ${trackId + 1}`
 }
 
 export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [trackStates, setTrackStates] = useState(INITIAL_TRACK_STATES)
+  const [trackIds, setTrackIds] = useState<TrackId[]>(INITIAL_TRACK_IDS)
 
   useEffect(() => {
     let active = true
@@ -56,17 +65,30 @@ export default function App() {
     setTrackStates((current) => ({ ...current, [trackId]: state }))
   }, [])
 
-  const gridLocked = Object.values(trackStates).some((state) => state !== TrackState.IDLE)
+  const handleAddTrack = useCallback(() => {
+    setTrackIds((current) => [...current, (current.at(-1) ?? -1) + 1])
+  }, [])
+
+  const handleRemoveTrack = useCallback((trackId: TrackId) => {
+    getAudioEngine().removeTrack(trackId)
+    setTrackIds((current) => current.filter((id) => id !== trackId))
+    setTrackStates((current) => {
+      const next = { ...current }
+      delete next[trackId]
+      return next
+    })
+  }, [])
+
+  const gridLocked = trackIds.some(
+    (trackId) => (trackStates[trackId] ?? TrackState.IDLE) !== TrackState.IDLE
+  )
+  const nextTrackId = (trackIds.at(-1) ?? -1) + 1
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true" />
-          <div>
-            <h1>LOOP / GRID</h1>
-            <span>QUANTIZED PERFORMANCE SYSTEM</span>
-          </div>
+          <img className={styles.brandLogo} src={logoUrl} alt="Looper" />
         </div>
         <div className={styles.headerTools}>
           <InputSelector ready={ready} />
@@ -92,29 +114,24 @@ export default function App() {
         <section className={styles.trackSection}>
           <div className={styles.sectionTitle}>
             <span>TRACK BANK</span>
-            <span>3 × MONO / 48 KHZ</span>
+            <span>{trackIds.length} × MONO / 48 KHZ</span>
           </div>
           <div className={styles.tracks}>
-            <LoopTrack
-              trackId={0}
-              label="Track A"
+            {trackIds.map((trackId) => (
+              <LoopTrack
+                key={trackId}
+                trackId={trackId}
+                label={getTrackLabel(trackId)}
+                disabled={!ready}
+                onError={setError}
+                onTrackStateChange={handleTrackStateChange}
+                onRemove={handleRemoveTrack}
+              />
+            ))}
+            <AddTrackCard
+              nextTrackId={nextTrackId}
               disabled={!ready}
-              onError={setError}
-              onTrackStateChange={handleTrackStateChange}
-            />
-            <LoopTrack
-              trackId={1}
-              label="Track B"
-              disabled={!ready}
-              onError={setError}
-              onTrackStateChange={handleTrackStateChange}
-            />
-            <LoopTrack
-              trackId={2}
-              label="Track C"
-              disabled={!ready}
-              onError={setError}
-              onTrackStateChange={handleTrackStateChange}
+              onAdd={handleAddTrack}
             />
           </div>
         </section>

@@ -1,4 +1,4 @@
-export type TrackId = 0 | 1 | 2
+export type TrackId = number
 
 export enum TrackState {
   IDLE = 'idle',

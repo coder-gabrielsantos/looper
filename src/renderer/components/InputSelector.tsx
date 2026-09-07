@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react'
+import Select, { SingleValue } from 'react-select'
 import { getAudioEngine, InputDevice } from '../audio/audioEngine'
 import styles from './InputSelector.module.css'
 
 interface InputSelectorProps {
   ready: boolean
+}
+
+interface InputOption {
+  value: string
+  label: string
+}
+
+function DropdownIndicator() {
+  return <span className={styles.chevron} aria-hidden="true" />
 }
 
 export default function InputSelector({ ready }: InputSelectorProps) {
@@ -37,8 +47,16 @@ export default function InputSelector({ ready }: InputSelectorProps) {
     return () => navigator.mediaDevices.removeEventListener('devicechange', handler)
   }, [ready])
 
-  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const deviceId = e.target.value
+  const options: InputOption[] = devices.map((device) => ({
+    value: device.deviceId,
+    label: device.label
+  }))
+  const selectedOption = options.find((option) => option.value === selected) ?? null
+
+  const handleChange = async (option: SingleValue<InputOption>) => {
+    if (!option) return
+
+    const deviceId = option.value
     const previousDeviceId = selected
     setSelected(deviceId)
     setError(null)
@@ -56,18 +74,21 @@ export default function InputSelector({ ready }: InputSelectorProps) {
   return (
     <div className={styles.container}>
       <label className={styles.label} htmlFor="input-select">INPUT</label>
-      <select
-        id="input-select"
-        className={styles.select}
-        value={selected}
+      <Select<InputOption, false>
+        inputId="input-select"
+        className={styles.selectRoot}
+        classNamePrefix="inputSelect"
+        options={options}
+        value={selectedOption}
         onChange={handleChange}
-        disabled={!ready || switching || devices.length === 0}
-      >
-        {devices.length === 0 && <option>No input devices</option>}
-        {devices.map((d) => (
-          <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-        ))}
-      </select>
+        isDisabled={!ready || switching || devices.length === 0}
+        isLoading={switching}
+        isSearchable={false}
+        components={{ DropdownIndicator, IndicatorSeparator: null }}
+        placeholder={ready ? 'NO INPUT DEVICES' : 'INITIALIZING AUDIO'}
+        noOptionsMessage={() => 'NO INPUT DEVICES'}
+        aria-label="Audio input device"
+      />
       {error && <span className={styles.error}>{error}</span>}
     </div>
   )
