@@ -21,16 +21,6 @@
   border-left: 1px solid var(--line-soft);
 }
 
-.tempo {
-  position: relative;
-}
-
-.tempoLocked {
-  position: absolute;
-  top: 15px;
-  right: 17px;
-}
-
 .sectionHeading {
   display: flex;
   align-items: center;
@@ -39,7 +29,6 @@
 
 .eyebrow,
 .clockState,
-.locked,
 .unit {
   font-family: var(--mono);
   font-size: 9px;
@@ -57,10 +46,6 @@
 
 .clockState.active {
   color: var(--cyan);
-}
-
-.locked {
-  color: var(--amber);
 }
 
 .transport {

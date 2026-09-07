@@ -116,7 +116,6 @@ export default function ClockControls({ locked, onError }: ClockControlsProps) {
       </div>
 
       <div className={styles.tempo}>
-        {locked && <span className={`${styles.locked} ${styles.tempoLocked}`}>GRID LOCKED</span>}
         <div className={styles.bpmControl}>
           <button
             className={styles.bpmStep}
